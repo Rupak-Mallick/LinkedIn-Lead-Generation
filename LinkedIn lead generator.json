@@ -242,7 +242,7 @@
         688,
         -176
       ],
-      "id": "ba5f5615-f876-4b74-b520-01b7c84fe6f0",
+      "id": "ba5f5615-f876-4b74-b520-01b7c84fe...",
       "name": "Append row in sheet",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -358,11 +358,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2e1fd0c8-938b-48d7-8d63-8feaee541e26",
+  "versionId": "2e1fd0c8-938b-48d7-8d63-8feaee541...(Client Id here)",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "d2fc0afe40323bf9e6a2adb6f9919c29aba67cd448759c60eb76310dccb9f2f6"
+    "instanceId": "d2fc0afe40323bf9e6a2adb6f9919c29aba67cd448759c60eb76310dccb9f..."
   },
-  "id": "YCzXKO7kf3b9FGzW",
+  "id": "YCzXKO7kf3b.....(browser id here)",
   "tags": []
 }
