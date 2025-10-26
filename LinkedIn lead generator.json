@@ -1,0 +1,368 @@
+{
+  "name": "LinkedIn lead generator",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -896,
+        -176
+      ],
+      "id": "23f5e2cb-0301-4b4f-9948-d56a663e959a",
+      "name": "When chat message received",
+      "webhookId": "983a8b31-a96d-46c6-9202-46043accfec2"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        48
+      ],
+      "id": "c723b4f0-5d00-40ee-8dd4-38d791c12ab0",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "U8RzbfUl0xSrASm9",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extract the following information from the text here:\n\n{{ $json.chatInput }}\n\n-Job title \n-Industry\n-Location\n\nIf I type in \"investment banking directors in atlanta\", following should be the result.\nUse this same logic.\nJob title: Director \nIndustry: Investment banking\nLocation:Atlanta\n\nReturn the result as the JSON file.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -640,
+        -176
+      ],
+      "id": "fdf21790-9323-4fb8-9613-aa92057f5848",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"job_title\": \"Director\",\n  \"industry\": \"Investment Banking\", \n  \"location\": \"Atlanta\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -496,
+        48
+      ],
+      "id": "0afa9a2d-cefd-46a6-a465-a182663fe892",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": "whisper-large-v3",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        256
+      ],
+      "id": "3277d531-20d3-4c6d-af9c-0d40dabf3a7b",
+      "name": "Groq Chat Model1",
+      "credentials": {
+        "groqApi": {
+          "id": "U8RzbfUl0xSrASm9",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12b78581-a003-4fb7-a67c-4aa8baba61bc",
+              "name": "startindicies",
+              "value": "[1,11,21]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -240,
+        -176
+      ],
+      "id": "16bb41d6-1ebb-4ab0-9225-5083d5814251",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "startindicies",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -176
+      ],
+      "id": "e47b3e74-1421-4b9e-afa2-52314cd73299",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "url": "https://customsearch.googleapis.com/customsearch/v1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $('Basic LLM Chain').item.json.output.job_title }}{{ $('Basic LLM Chain').item.json.output.industry }} in {{ $('Basic LLM Chain').item.json.output.location }} site:linkedin.com/in"
+            },
+            {
+              "name": "key",
+              "value": "AIzaSyBAHB9WXZx3VCzwgkucdiZAplhB5C5Jc3o"
+            },
+            {
+              "name": "cx",
+              "value": "63103f6ce0f664f0b"
+            },
+            {
+              "name": "start",
+              "value": "={{ $json.startindicies }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        -176
+      ],
+      "id": "739c0539-6614-4533-9456-bd8f5c97ee71",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input data from n8n\nconst inputData = $input.all();\n\n// Extract profiles from the JSON structure\nconst profiles = [];\n\n// The data is in the first item's json property\nconst searchData = inputData[0].json;\n\n// Check if searchData is an array\nconst dataArray = Array.isArray(searchData) ? searchData : [searchData];\n\n// Iterate through each search result page\ndataArray.forEach(searchResult => {\n  // Check if items exist in the search result\n  if (searchResult.items && Array.isArray(searchResult.items)) {\n    searchResult.items.forEach(item => {\n      // Extract name from title (everything before the first dash)\n      const titleMatch = item.title.match(/^([^-]+)/);\n      const name = titleMatch ? titleMatch[1].trim() : item.title;\n      \n      // Add profile to results\n      profiles.push({\n        name: name,\n        title: item.title,\n        snippet: item.snippet,\n        url: item.link\n      });\n    });\n  }\n});\n\n// Return in n8n format - array of objects with json property\nreturn profiles.map(profile => ({\n  json: profile\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -176
+      ],
+      "id": "dba0d441-bbd8-4af0-bc36-5230c1a1f78c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1TGbEe-yYj5pAw4Lzd8zgJTsH1TzmkAsk9BrJsdp9Br0/edit?usp=drivesdk",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1TGbEe-yYj5pAw4Lzd8zgJTsH1TzmkAsk9BrJsdp9Br0/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Title": "={{ $json.title }}",
+            "Snippet": "={{ $json.snippet }}",
+            "Url": "={{ $json.url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Snippet",
+              "displayName": "Snippet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Url",
+              "displayName": "Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        688,
+        -176
+      ],
+      "id": "ba5f5615-f876-4b74-b520-01b7c84fe6f0",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5To1Q2bCfrImNcSq",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2e1fd0c8-938b-48d7-8d63-8feaee541e26",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d2fc0afe40323bf9e6a2adb6f9919c29aba67cd448759c60eb76310dccb9f2f6"
+  },
+  "id": "YCzXKO7kf3b9FGzW",
+  "tags": []
+}
